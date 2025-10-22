@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Practical Vanity Vault — Save My Shelf Edition</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --brand-teal:#14b8a6;
+      --brand-teal-600:#0d9488;
+      --brand-teal-100:#ccfbf1;
+      --brand-pink:#ec4899;
+      --brand-pink-600:#db2777;
+      --brand-pink-100:#fce7f3;
+      --amber-100:#fef3c7;
+      --amber-700:#b45309;
+      --rose-100:#ffe4e6;
+      --rose-700:#be123c;
+      --emerald-100:#d1fae5;
+      --emerald-700:#047857;
+      --bg:#fdf2f8;
+      --card:#ffffff;
+      --ink:#0f172a;
+      --muted:#64748b;
+      --ring: rgba(20,184,166,.35);
+      --border:#e5e7eb;
+      --hover:#f8fafc;
+      --low-glow:#fce7f388;
+    }
+    [data-theme="dark"]{
+      --bg:#0b1020;
+      --card:#0f172a;
+      --ink:#e5e7eb;
+      --muted:#94a3b8;
+      --border:#1f2a44;
+      --hover:#0b1225;
+      --brand-pink:#f472b6;
+      --brand-pink-600:#ec4899;
+      --brand-pink-100:#3b1e2a;
+      --brand-teal:#2dd4bf;
+      --brand-teal-600:#14b8a6;
+      --brand-teal-100:#143431;
+      --amber-100:#3a2b07;
+      --amber-700:#fbbf24;
+      --rose-100:#3b0a0f;
+      --rose-700:#fb7185;
+      --emerald-100:#062d22;
+      --emerald-700:#34d399;
+      --low-glow:#3b1e2a88;
+    }
+    body { font-family:'Inter',sans-serif; background: var(--bg); color: var(--ink); }
+    .brand-gradient{ background: linear-gradient(90deg, var(--brand-pink) 0%, var(--brand-teal) 100%); }
+    .card{ background: var(--card); border:1px solid var(--border); }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:.65rem; padding:.45rem .7rem; border:1px solid var(--border); font-weight:600; background:transparent; color:var(--ink); }
+    .btn-primary{ background:var(--brand-teal); color:#0b1020; border-color: var(--brand-teal); }
+    .btn-soft{ background:transparent; }
+    .btn-soft:hover{ background:var(--hover); }
+    .btn-mini{ padding:.2rem .45rem; font-size:.8rem; border-radius:.5rem; }
+    .chip{ display:inline-flex; align-items:center; border-radius:999px; padding:.15rem .6rem; font-size:.75rem; font-weight:600; white-space:nowrap; }
+    .chip-teal{ background:var(--brand-teal-100); color:var(--brand-teal-600); }
+    .chip-pink{ background:var(--brand-pink-100); color:var(--brand-pink-600); }
+    .chip-muted{ background:#1e293b22; color:var(--muted); }
+    .chip-warn{ background:var(--amber-100); color:var(--amber-700); }
+    .chip-expired{ background:var(--rose-100); color:var(--rose-700); }
+    .chip-fresh{ background:var(--emerald-100); color:var(--emerald-700); }
+    .row-hover:hover{ background: var(--hover); }
+    .low-glow{ box-shadow: 0 0 0 2px var(--brand-pink), 0 0 24px 4px var(--low-glow); border-radius: .75rem; }
+    .wrap-chip { white-space: normal; line-height:1.35; text-align:center; max-width:100%; display:block; margin:.5rem auto 0; }
+    .low-stock-chip { white-space: normal; word-wrap: break-word; line-height:1.3; max-width:100%; }
+    /* Floating backup */
+    .float-backup{
+      position:fixed; right:1rem; bottom:1rem; z-index:50;
+      display:inline-flex; align-items:center; gap:.5rem;
+      padding:.6rem .9rem; border-radius:999px; font-weight:700;
+      background: linear-gradient(90deg, var(--brand-pink) 0%, var(--brand-teal) 100%);
+      color:#0b1020; border:none; box-shadow: 0 8px 22px rgba(0,0,0,.15);
+      transition: transform .15s ease, box-shadow .2s ease, opacity .2s ease;
+    }
+    .float-backup:hover{ transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,.2); }
+    [data-theme="dark"] .float-backup{ color:#020617; box-shadow: 0 0 0 2px rgba(255,255,255,.06), 0 10px 28px rgba(0,0,0,.5); }
+    @keyframes softPulse { 0%{ box-shadow: 0 0 0 0 rgba(236,72,153,.25);} 70%{ box-shadow: 0 0 0 14px rgba(236,72,153,0);} 100%{ box-shadow: 0 0 0 0 rgba(236,72,153,0);} }
+    [data-theme="dark"] .float-backup{ animation: softPulse 2.2s ease-in-out infinite; }
+  </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+  <div class="max-w-6xl mx-auto">
+    <header class="mb-6">
+      <div class="brand-gradient rounded-2xl p-[1px] shadow-lg">
+        <div class="card rounded-2xl p-6 sm:p-8">
+          <div class="flex items-center justify-between flex-wrap gap-4">
+            <div class="w-full">
+              <h1 class="text-4xl font-extrabold text-center">The Practical Vanity Vault</h1>
+              <div class="wrap-chip">Helping you justify your next skincare haul!</div>
+              <div class="flex items-center justify-center gap-2 mt-3">
+                <button id="themeToggle" class="btn btn-soft" title="Toggle dark mode">🌙 Dark mode</button>
+                
+                
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Form -->
+    <div class="card p-6 shadow-2xl rounded-xl mb-4">
+      <h2 class="text-xl font-bold mb-5 flex items-center gap-2">📦 Add / Edit Product</h2>
+
+      <form id="product-form" class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium mb-1">Product Name</label>
+          <input id="name" type="text" class="w-full p-2.5 border rounded-lg" required>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium mb-1">Brand</label>
+          <input id="brand" type="text" class="w-full p-2.5 border rounded-lg" required>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium mb-1">Category</label>
+          <select id="type" class="w-full p-2.5 border rounded-lg">
+            <option>Skincare</option>
+            <option>Makeup</option>
+            <option>Body</option>
+            <option>Hair</option>
+            <option>Fragrance</option>
+            <option>Tools</option>
+            <option>Other</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium mb-1">Photo</label>
+          <input id="photo" type="file" accept="image/*" class="w-full p-2.5 border rounded-lg">
+          <div id="photo-preview" class="mt-2 hidden">
+            <img class="w-16 h-16 object-cover rounded-md border" />
+          </div>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium mb-1">Notes</label>
+          <input id="notes" type="text" class="w-full p-2.5 border rounded-lg" placeholder="retailer, promo, how it performs…">
+        </div>
+
+        <!-- Batches Editor -->
+        <div class="sm:col-span-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Batches</h3>
+            <button type="button" id="addBatch" class="btn btn-soft">＋ Add Batch</button>
+          </div>
+          <div class="overflow-x-auto mt-2">
+            <table class="w-full text-sm" id="batchesTable" style="border-collapse:collapse">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border)">
+                  <th class="text-left py-2">Batch #</th>
+                  <th class="text-center py-2">Qty</th>
+                  <th class="text-center py-2">Opened</th>
+                  <th class="text-left py-2">Mfg</th>
+                  <th class="text-left py-2">Expiry</th>
+                  <th class="text-left py-2">Opened On</th>
+                  <th class="text-left py-2">PAO (m)</th>
+                  <th class="text-right py-2"></th>
+                </tr>
+              </thead>
+              <tbody id="batchesBody"></tbody>
+            </table>
+          </div>
+          <div class="text-xs mt-2" style="color:var(--muted)">Tip: Opened units cannot exceed quantity.</div>
+        </div>
+
+        <div class="sm:col-span-4 flex gap-2 pt-2">
+          <button type="submit" class="btn btn-primary">💾 Save Product</button>
+          <button id="reset-form" type="button" class="btn btn-soft">Reset</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Inventory -->
+    <div class="card p-4 rounded-xl shadow">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold">Inventory</h3>
+        <div class="text-xs" style="color:var(--muted)">Click a row to expand batches</div>
+      </div>
+      <div id="inventory-list" class="divide-y" style="border-color:var(--border)"></div>
+    </div>
+    <div class="w-full h-[2px] my-6 rounded-full" style="background:linear-gradient(90deg,#ec4899,#14b8a6);"></div>
+<!-- Filters & Settings (top) -->
+    <!-- Filters & Search (moved) -->
+    <div class="card p-4 rounded-xl shadow mt-4">
+      <div class="font-semibold mb-2">Search & Sort Your Shelf</div>
+      <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div class="flex flex-wrap gap-2 items-center">
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2" style="color:var(--muted)">🔎</span>
+            <input id="search" type="text" placeholder="Search name or notes…" class="pl-9 pr-3 py-2 border rounded-lg w-64">
+          </div>
+          <select id="brandFilter" class="py-2 px-3 border rounded-lg">
+            <option value="">All brands</option>
+          </select>
+          <select id="categoryFilter" class="py-2 px-3 border rounded-lg">
+            <option value="">All categories</option>
+            <option>Skincare</option>
+            <option>Makeup</option>
+            <option>Body</option>
+            <option>Hair</option>
+            <option>Fragrance</option>
+            <option>Tools</option>
+            <option>Other</option>
+          </select>
+          <label class="flex items-center gap-2 ml-2 text-sm">
+            <input id="lowOnly" type="checkbox"> Low only
+          </label>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2 text-sm">
+            ⚙️ <span>Threshold</span>
+            <input id="lowThreshold" type="number" min="0" max="50" value="1" class="w-16 py-1 px-2 border rounded">
+            <span>unopened</span>
+          </div>
+          <label class="flex items-center gap-2 text-sm">
+            <input id="soundToggle" type="checkbox">
+            Play low-stock sound ✨
+          </label>
+        </div>
+        <div id="counts" class="text-sm" style="color:var(--muted)"></div>
+      </div>
+    </div>
+
+    
+
+
+    
+    <div class="w-full h-[2px] my-6 rounded-full" style="background:linear-gradient(90deg,#ec4899,#14b8a6);"></div>
+
+    <!-- Import/Export Actions (bottom card) -->
+    <div class="card p-4 rounded-xl shadow mt-4">
+      <div class="flex flex-wrap items-center gap-3 justify-between">
+        <div class="font-semibold">Backups & Imports</div>
+        <div class="flex items-center gap-3">
+          <button id="exportCsv" class="btn btn-soft">Export CSV</button>
+          <label class="btn btn-soft cursor-pointer">Import JSON
+            <input id="importJson" type="file" accept="application/json" class="hidden">
+          </label>
+        </div>
+        <div class="text-sm" style="color:var(--muted)">Keep your vanity vault safe — export, import, or save anytime.</div>
+      </div>
+    </div>
+  </div>
+
+  <template id="batch-row">
+    <tr>
+      <td class="py-1"><input type="text" class="w-full p-1 border rounded" placeholder="e.g., L2410"></td>
+      <td class="py-1 text-center">
+        <div class="flex items-center justify-center gap-1">
+          <button class="btn btn-mini btn-soft" data-batch="qty-dec">-</button>
+          <input type="number" min="0" value="1" class="w-16 p-1 border rounded text-center">
+          <button class="btn btn-mini btn-soft" data-batch="qty-inc">+</button>
+        </div>
+      </td>
+      <td class="py-1 text-center">
+        <div class="flex items-center justify-center gap-1">
+          <button class="btn btn-mini btn-soft" data-batch="open-dec">-</button>
+          <input type="number" min="0" value="0" class="w-16 p-1 border rounded text-center">
+          <button class="btn btn-mini btn-soft" data-batch="open-inc">+</button>
+        </div>
+      </td>
+      <td class="py-1"><input type="date" class="w-full p-1 border rounded"></td>
+      <td class="py-1"><input type="date" class="w-full p-1 border rounded"></td>
+      <td class="py-1"><input type="date" class="w-full p-1 border rounded"></td>
+      <td class="py-1"><input type="number" min="0" value="0" class="w-full p-1 border rounded"></td>
+      <td class="py-1 text-right"><button class="btn btn-mini btn-soft" data-batch="remove">Delete</button></td>
+    </tr>
+  </template>
+
+  <button id="backupBtn" class="float-backup" title="Back up before your moisturizer expires 😉">＋ Save My Shelf</button>
+
+  <script>
+    const $ = (s, r=document)=>r.querySelector(s);
+    const $all = (s, r=document)=>Array.from(r.querySelectorAll(s));
+    const STORAGE_KEY = 'practical_vanity_vault_inventory_v7';
+    const THEME_KEY = 'practical_vanity_vault_theme';
+    const LOW_KEY = 'practical_vault_low_threshold';
+    const SOUND_KEY = 'practical_vault_sound_enabled';
+    
+    // Migration shim: if older key missing but a newer key exists, adopt it
+    try {
+      const kOld = 'practical_vanity_vault_inventory_v7';
+      const kNew = 'practical_vanity_vault_inventory_v10';
+      if (!localStorage.getItem(kOld) && localStorage.getItem(kNew)) {
+        localStorage.setItem(kOld, localStorage.getItem(kNew));
+      }
+    } catch(e) {}
+
+    let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let filters = { brand:'', category:'', q:'', lowOnly:false };
+    const expandedKeys = new Set();
+
+    // THEME
+    function setTheme(t){ document.documentElement.setAttribute('data-theme', t); localStorage.setItem(THEME_KEY, t); }
+    function toggleTheme(){ const cur = document.documentElement.getAttribute('data-theme')||'light'; setTheme(cur==='light'?'dark':'light'); }
+    (function initTheme(){ setTheme(localStorage.getItem(THEME_KEY)||'light'); })();
+    $('#themeToggle').addEventListener('click', toggleTheme);
+
+    // SETTINGS
+    function getThreshold(){ return Number(localStorage.getItem(LOW_KEY) ?? 1) || 0; }
+    function setThreshold(v){ localStorage.setItem(LOW_KEY, String(Math.max(0, Number(v)||0))); }
+    function getSound(){ return localStorage.getItem(SOUND_KEY) === '1'; }
+    function setSound(v){ localStorage.setItem(SOUND_KEY, v ? '1' : '0'); }
+    $('#lowThreshold').value = getThreshold();
+    $('#soundToggle').checked = getSound();
+    $('#lowThreshold').addEventListener('input', e=>{ setThreshold(e.target.value); render(); });
+    $('#soundToggle').addEventListener('change', e=> setSound(e.target.checked));
+
+    // SOUND
+    function sparkleDing(){
+      if (!getSound()) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = 1200;
+        o.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+        o.start(); o.stop(ctx.currentTime + 0.26);
+      } catch(e) {}
+    }
+
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+
+    function sum(arr, f){ return arr.reduce((a,b)=>a + (f? f(b) : b), 0); }
+    function fmtDate(d){ const dd = new Date(d); if (isNaN(dd)) return null; return dd.toISOString().slice(0,10); }
+    function addMonths(dateStr, months){ if(!dateStr) return null; const d=new Date(dateStr); if(isNaN(d)) return null; d.setMonth(d.getMonth()+Number(months||0)); return d; }
+    function daysFromNow(date){ if(!date) return null; const d=new Date(date); return Math.floor((d - new Date())/(1000*60*60*24)); }
+
+    function deriveStatus(totalQty, totalOpened){
+      const qty = Number(totalQty)||0, opened = Number(totalOpened)||0;
+      if (qty === 0) return {text:'Finished', cls:'chip-muted'};
+      if (opened === 0) return {text:'All unopened', cls:'chip-teal'};
+      if (opened >= qty) return {text:'All opened', cls:'chip-pink'};
+      return {text:`Mixed: ${opened}/${qty} opened`, cls:'chip-pink'};
+    }
+
+    function paoBadge(openedDate, paoMonths){
+      if (!openedDate || !paoMonths || Number(paoMonths) <= 0) return {text:'PAO expiry: —', cls:'chip-muted'};
+      const exp = addMonths(openedDate, paoMonths);
+      if (!exp) return {text:'PAO expiry: —', cls:'chip-muted'};
+      const d = daysFromNow(exp);
+      if (d < 0) return {text:`PAO expired ${Math.abs(d)}d ago`, cls:'chip-expired'};
+      if (d <= 30) return {text:`PAO exp in ${d}d (${fmtDate(exp)})`, cls:'chip-warn'};
+      return {text:`PAO exp ${fmtDate(exp)}`, cls:'chip-fresh'};
+    }
+
+    function aggregate(product){
+      const totalQty = sum(product.batches || [], b => Number(b.qty)||0);
+      const totalOpened = sum(product.batches || [], b => Number(b.opened)||0);
+      let pao = {text:'PAO expiry: —', cls:'chip-muted'};
+      (product.batches||[]).forEach(b=>{
+        const badge = paoBadge(b.openedOn, b.pao);
+        if (badge.text !== 'PAO expiry: —'){
+          if (pao.text === 'PAO expiry: —') pao = badge;
+          else {
+            const d1 = badge.text.includes('exp in') ? Number(badge.text.match(/exp in (\d+)d/)[1]) : (badge.text.includes('expired') ? -1 : 99999);
+            const d2 = pao.text.includes('exp in') ? Number(pao.text.match(/exp in (\d+)d/)[1]) : (pao.text.includes('expired') ? -1 : 99999);
+            if (d1 < d2) pao = badge;
+          }
+        }
+      });
+      return { totalQty, totalOpened, pao };
+    }
+
+    const funLines = [
+      '💦 Running low — hydrate responsibly',
+      '⚠️ One lonely bottle left 😢',
+      '🧴 Stock’s thinning faster than serum on sale',
+      '🕯️ Almost out — time to manifest a restock',
+      '🛍️ Low stock alert! Treat yourself soon?'
+    ];
+    function lowChipText(){ return funLines[Math.floor(Math.random()*funLines.length)]; }
+
+    function isLow(product){
+      const a = aggregate(product);
+      const unopened = Math.max(0, a.totalQty - a.totalOpened);
+      const th = getThreshold();
+      return { low: unopened <= th, unopened, total:a.totalQty, opened:a.totalOpened };
+    }
+
+    function uniqueBrands(){ const set = new Set(items.map(i=>(i.brand||'').trim()).filter(Boolean)); return Array.from(set).sort((a,b)=>a.localeCompare(b)); }
+    function populateBrandFilter(){
+      const sel = $('#brandFilter'); const selected = sel.value;
+      sel.innerHTML = `<option value="">All brands</option>` + uniqueBrands().map(b=>`<option ${b===selected?'selected':''}>${b}</option>`).join('');
+    }
+
+    function applyFilters(list){
+      let out = list.slice();
+      if (filters.brand) out = out.filter(i => (i.brand||'').toLowerCase() === filters.brand.toLowerCase());
+      if (filters.category) out = out.filter(i => (i.type||'').toLowerCase() === filters.category.toLowerCase());
+      if (filters.q) { const q = filters.q.toLowerCase(); out = out.filter(i => `${i.name} ${i.notes||''}`.toLowerCase().includes(q)); }
+      if (filters.lowOnly) out = out.filter(i => isLow(i).low);
+      return out;
+    }
+
+    function keyFor(p){ return (p.name||'')+'|'+(p.brand||''); }
+    function rerenderPreserveScroll(){
+      const y = window.scrollY || 0;
+      render();
+      window.scrollTo(0,y);
+    }
+
+    // Photo preview
+    $('#photo').addEventListener('change', e=>{
+      const file = e.target.files?.[0];
+      const pv = $('#photo-preview'); const img = pv.querySelector('img');
+      if (!file) { img.src=''; pv.classList.add('hidden'); return; }
+      const r = new FileReader();
+      r.onload = ()=>{ img.src = r.result; pv.classList.remove('hidden'); };
+      r.readAsDataURL(file);
+    });
+
+    // Batch editor
+    function addBatchRow(b){
+      const tpl = $('#batch-row').content.cloneNode(true);
+      const tr = tpl.querySelector('tr');
+      const [batchNo, qtyWrap, openedWrap, mfg, exp, openedOn, pao] = tr.querySelectorAll('td');
+
+      if (b){
+        batchNo.querySelector('input').value = b.batchNo||'';
+        qtyWrap.querySelector('input').value = Number(b.qty||1);
+        openedWrap.querySelector('input').value = Number(b.opened||0);
+        mfg.querySelector('input').value = b.mfg||'';
+        exp.querySelector('input').value = b.exp||'';
+        openedOn.querySelector('input').value = b.openedOn||'';
+        pao.querySelector('input').value = Number(b.pao||0);
+      }
+      tr.querySelector('[data-batch="qty-inc"]').addEventListener('click', ()=>{ const i=qtyWrap.querySelector('input'); i.value = Number(i.value||0)+1; });
+      tr.querySelector('[data-batch="qty-dec"]').addEventListener('click', ()=>{ const i=qtyWrap.querySelector('input'); i.value = Math.max(0, Number(i.value||0)-1); const o=openedWrap.querySelector('input'); if (Number(o.value)>Number(i.value)) o.value = i.value; });
+      tr.querySelector('[data-batch="open-inc"]').addEventListener('click', ()=>{ const o=openedWrap.querySelector('input'); const q=qtyWrap.querySelector('input'); o.value = Math.min(Number(q.value||0), Number(o.value||0)+1); });
+      tr.querySelector('[data-batch="open-dec"]').addEventListener('click', ()=>{ const o=openedWrap.querySelector('input'); o.value = Math.max(0, Number(o.value||0)-1); });
+      tr.querySelector('[data-batch="remove"]').addEventListener('click', ()=>{ tr.remove(); ensureAtLeastOneBatchRow(); });
+      $('#batchesBody').appendChild(tr);
+    }
+    function ensureAtLeastOneBatchRow(){ if($all('#batchesBody tr').length===0) addBatchRow(); }
+    $('#addBatch').addEventListener('click', ()=>{ addBatchRow(); const first = document.querySelector('#batchesBody tr:last-child td input'); if(first) first.focus(); });
+
+    // Submit (manual save only)
+    $('#product-form').addEventListener('submit', e=>{
+      e.preventDefault();
+      const rows = $all('#batchesBody tr');
+      if (rows.length === 0){ alert('Add at least one batch.'); return; }
+      const batches = rows.map(tr => {
+        const cells = tr.querySelectorAll('td');
+        const [batchNo, qtyWrap, openedWrap, mfg, exp, openedOn, pao] = cells;
+        const qty = Number(qtyWrap.querySelector('input')?.value || 0);
+        const opened = Number(openedWrap.querySelector('input')?.value || 0);
+        if (opened > qty) { throw new Error('Opened units cannot exceed quantity in a batch.'); }
+        return {
+          batchNo: batchNo.querySelector('input').value.trim(),
+          qty,
+          opened,
+          mfg: mfg.querySelector('input').value,
+          exp: exp.querySelector('input').value,
+          openedOn: openedOn.querySelector('input').value,
+          pao: Number(pao.querySelector('input').value||0)
+        };
+      });
+
+      const pvImg = $('#photo-preview img');
+      const product = {
+        name: $('#name').value.trim(),
+        brand: $('#brand').value.trim(),
+        type: $('#type').value,
+        notes: $('#notes').value.trim(),
+        photo: pvImg?.src || '',
+        batches
+      };
+      items.push(product);
+      save();
+      e.target.reset(); $('#photo-preview').classList.add('hidden'); $('#batchesBody').innerHTML=''; ensureAtLeastOneBatchRow();
+      render();
+      window.scrollTo({top:0, behavior:'smooth'});
+    });
+
+    $('#reset-form').addEventListener('click', ()=>{
+      $('#product-form').reset();
+      $('#photo-preview').classList.add('hidden');
+      $('#batchesBody').innerHTML=''; ensureAtLeastOneBatchRow();
+    });
+
+    // Export CSV (flatten batches)
+    $('#exportCsv').addEventListener('click', ()=>{
+      const headers = ['name','brand','type','notes','batchNo','qty','opened','mfg','exp','openedOn','pao'];
+      const rows = [];
+      items.forEach(p=> (p.batches||[]).forEach(b=>{
+        rows.push([p.name,p.brand,p.type,p.notes,b.batchNo,b.qty,b.opened,b.mfg,b.exp,b.openedOn,b.pao]);
+      }));
+      const csv = [headers.join(','), ...rows.map(r => r.map(v => '"'+String(v??'').replaceAll('"','""')+'"').join(','))].join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'vanity_vault_batches.csv'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // Import JSON
+    $('#importJson').addEventListener('change', (e)=>{
+      const file = e.target.files?.[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!Array.isArray(data)) throw new Error('File is not a JSON array.');
+          if (!confirm('Import will replace your current inventory. Continue?')) return;
+          items = data.map(p => ({
+            name: String(p.name||'').trim(),
+            brand: String(p.brand||'').trim(),
+            type: p.type || 'Other',
+            notes: p.notes || '',
+            photo: p.photo || '',
+            batches: Array.isArray(p.batches) ? p.batches.map(b => ({
+              batchNo: b.batchNo || '',
+              qty: Number(b.qty||0),
+              opened: Number(b.opened||0),
+              mfg: b.mfg || '',
+              exp: b.exp || '',
+              openedOn: b.openedOn || '',
+              pao: Number(b.pao||0)
+            })) : []
+          }));
+          save(); render();
+        } catch (err) {
+          alert('Import failed: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    // Backup button
+    document.getElementById('backupBtn').addEventListener('click', ()=>{
+      try {
+        const data = JSON.stringify(items, null, 2);
+        const blob = new Blob([data], {type:'application/json;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'vanity_vault_backup.json';
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) { alert('Backup failed: ' + e.message); }
+    });
+
+    // Rendering
+    function render(){
+      populateBrandFilter();
+      const filtered = applyFilters(items);
+      const totalUnits = filtered.reduce((a,p)=> a + aggregate(p).totalQty, 0);
+      const totalOpened = filtered.reduce((a,p)=> a + aggregate(p).totalOpened, 0);
+      $('#counts').textContent = `${filtered.length} items · ${totalUnits} units (${totalOpened} opened)`;
+
+      const list = $('#inventory-list'); list.innerHTML = '';
+      if (!filtered.length){ list.innerHTML = '<div class="py-6 text-center" style="color:var(--muted)">No matches — adjust your filters or add a product.</div>'; return; }
+
+      filtered.forEach((p)=>{
+        const a = aggregate(p);
+        const status = deriveStatus(a.totalQty, a.totalOpened);
+        const low = isLow(p);
+        const row = document.createElement('div');
+        row.className = 'py-3 px-2 rounded transition row-hover';
+        if (low.low && a.totalQty>0) row.classList.add('low-glow');
+
+        const lowChip = low.low && a.totalQty>0 ? `<div class="chip chip-pink small low-stock-chip">${lowChipText()} (${Math.max(0,low.unopened)} unopened)</div>` : '';
+
+        row.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-start gap-3 min-w-0">
+              ${p.photo ? `<img src="${p.photo}" class="w-12 h-12 object-cover rounded-md border mt-1" style="border-color:var(--border)"/>` : ''}
+              <div class="min-w-0">
+                <div class="font-semibold truncate">${p.name}</div>
+                <div class="text-xs truncate" style="color:var(--muted)">${p.brand} • ${p.type}</div>
+                <div class="mt-2 flex flex-wrap gap-2 items-center">
+                  <div class="chip ${status.cls}">${a.totalQty} pcs • ${status.text}</div>
+                  ${lowChip}
+                </div>
+              </div>
+            </div>
+            <div class="text-right shrink-0 space-y-2 ml-2">
+              <div class='flex items-center gap-1 justify-end'>
+                <button class='btn btn-soft btn-mini' data-action='edit'>Edit</button>
+                <button class='btn btn-soft btn-mini' data-action='delete'>Delete</button>
+                <button class='btn btn-soft btn-mini' data-action='toggle'>▼</button>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 hidden" data-section="batches">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm" style="border-collapse:collapse">
+                <thead>
+                  <tr style="border-bottom:1px solid var(--border)">
+                    <th class="text-left py-2">Batch #</th>
+                    <th class="text-center py-2">Qty</th>
+                    <th class="text-center py-2">Opened</th>
+                    <th class="text-left py-2">Mfg</th>
+                    <th class="text-left py-2">Expiry</th>
+                    <th class="text-left py-2">Opened On</th>
+                    <th class="text-left py-2">PAO (m)</th>
+                    <th class="text-left py-2">PAO status</th>
+                    <th class="text-right py-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
+        list.appendChild(row);
+        const tbody = row.querySelector('tbody');
+
+        (p.batches||[]).forEach((b, bi)=>{
+          const pb = paoBadge(b.openedOn, b.pao);
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="py-1">${b.batchNo||''}</td>
+            <td class="py-1 text-center">
+              <div class="inline-flex items-center gap-1">
+                <button class="btn btn-mini btn-soft" data-batch="qty-dec">-</button>
+                <span class="inline-block w-6 text-center">${Number(b.qty||0)}</span>
+                <button class="btn btn-mini btn-soft" data-batch="qty-inc">+</button>
+              </div>
+            </td>
+            <td class="py-1 text-center">
+              <div class="inline-flex items-center gap-1">
+                <button class="btn btn-mini btn-soft" data-batch="open-dec">-</button>
+                <span class="inline-block w-6 text-center">${Number(b.opened||0)}</span>
+                <button class="btn btn-mini btn-soft" data-batch="open-inc">+</button>
+              </div>
+            </td>
+            <td class="py-1">${b.mfg||''}</td>
+            <td class="py-1">${b.exp||''}</td>
+            <td class="py-1">${b.openedOn||''}</td>
+            <td class="py-1">${Number(b.pao||0)}</td>
+            <td class="py-1"><span class="chip small ${pb.cls}">${pb.text}</span></td>
+            <td class="py-1 text-right">
+              <button class="btn btn-mini btn-soft" data-batch="remove">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+
+          tr.querySelector('[data-batch="qty-dec"]').addEventListener('click', ()=>{ b.qty = Math.max(0, Number(b.qty||0)-1); if (Number(b.opened)>Number(b.qty)) b.opened=b.qty; save(); rerenderPreserveScroll(); });
+          tr.querySelector('[data-batch="qty-inc"]').addEventListener('click', ()=>{ b.qty = Number(b.qty||0)+1; save(); rerenderPreserveScroll(); });
+          tr.querySelector('[data-batch="open-dec"]').addEventListener('click', ()=>{ b.opened = Math.max(0, Number(b.opened||0)-1); save(); rerenderPreserveScroll(); });
+          tr.querySelector('[data-batch="open-inc"]').addEventListener('click', ()=>{ b.opened = Math.min(Number(b.qty||0), Number(b.opened||0)+1); save(); rerenderPreserveScroll(); });
+          tr.querySelector('[data-batch="remove"]').addEventListener('click', ()=>{ p.batches.splice(bi,1); save(); rerenderPreserveScroll(); });
+        });
+
+        // handlers
+        row.querySelector('[data-action="delete"]').addEventListener('click', ()=>{
+          if (confirm('Delete this product?')){ items.splice(items.indexOf(p),1); save(); render(); }
+        });
+        row.querySelector('[data-action="edit"]').addEventListener('click', ()=>{
+          // preload form
+          $('#name').value = p.name; $('#brand').value = p.brand; $('#type').value = p.type; $('#notes').value = p.notes || '';
+          const pv = $('#photo-preview'); const img = pv.querySelector('img');
+          if (p.photo) { img.src = p.photo; pv.classList.remove('hidden'); } else { img.src=''; pv.classList.add('hidden'); }
+          // load batches
+          $('#batchesBody').innerHTML = ''; (p.batches||[]).forEach(addBatchRow);
+          // remove existing product (submit will add new)
+          items.splice(items.indexOf(p),1); save(); render(); window.scrollTo({top:0, behavior:'smooth'});
+        });
+        row.querySelector('[data-action="toggle"]').addEventListener('click', ()=>{
+          const sec = row.querySelector('[data-section="batches"]');
+          const open = sec.classList.toggle('hidden') === false;
+          const btn = row.querySelector('[data-action="toggle"]'); btn.textContent = open ? '▲' : '▼';
+          if (open) expandedKeys.add(keyFor(p)); else expandedKeys.delete(keyFor(p));
+        });
+
+        // auto-open if remembered
+        if (expandedKeys.has(keyFor(p))) {
+          const sec = row.querySelector('[data-section="batches"]');
+          sec.classList.remove('hidden');
+          const btn = row.querySelector('[data-action="toggle"]'); btn.textContent = '▲';
+        }
+      });
+    }
+
+    // Filters handlers
+    $('#brandFilter').addEventListener('change', (e)=>{ filters.brand = e.target.value; render(); });
+    $('#categoryFilter').addEventListener('change', (e)=>{ filters.category = e.target.value; render(); });
+    $('#search').addEventListener('input', (e)=>{ filters.q = e.target.value; render(); });
+    $('#lowOnly').addEventListener('change', (e)=>{ filters.lowOnly = e.target.checked; render(); });
+
+    ensureAtLeastOneBatchRow();
+    render();
+  </script>
+<!-- Firebase Cloud Sync (Auth + Firestore) -->
+<script type="module">
+  // Firebase SDKs (12.4.0) from CDN – works on GitHub Pages
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc
+  } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+  // --- Your Firebase config (as given) ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyC76JfjPlm_GZncCo4L-ZG-z_nhsXjr0kY",
+    authDomain: "thepracticalvanityvault.firebaseapp.com",
+    projectId: "thepracticalvanityvault",
+    storageBucket: "thepracticalvanityvault.firebasestorage.app",
+    messagingSenderId: "69211565265",
+    appId: "1:69211565265:web:584f479257c7a72769e9f0"
+  };
+
+  // --- Init ---
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // ===== Helpers (hook into your existing page) =====
+  const $ = (s, r=document)=>r.querySelector(s);
+
+  // The key your app uses for local data (adjust if yours differs)
+  const STORAGE_KEY = "practical_vanity_vault_inventory_v7";
+
+  // Add a Sign in/out button next to your Dark mode button (no HTML changes needed)
+  (function injectAuthButton(){
+    const bar = document.querySelector("header .flex.items-center.justify-center.gap-2");
+    if (!bar) return;
+    const btn = document.createElement("button");
+    btn.id = "authBtn";
+    btn.className = "btn btn-soft";
+    btn.textContent = "Sign in";
+    btn.title = "Sign in with Google to sync across devices";
+    bar.appendChild(btn);
+
+    btn.addEventListener("click", async () => {
+      if (auth.currentUser) { await signOut(auth); return; }
+      try {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        alert("Sign-in failed: " + e.message);
+      }
+    });
+  })();
+
+  // Firestore doc path for each user
+  const userDoc = (uid) => doc(db, "users", uid);
+
+  // Save local items -> cloud
+  async function saveCloud() {
+    const u = auth.currentUser;
+    if (!u) return;
+    const items = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    await setDoc(userDoc(u.uid), { items }, { merge: true });
+  }
+
+  // Load cloud -> local (and render)
+  async function loadFromCloud(u) {
+    const snap = await getDoc(userDoc(u.uid));
+    if (snap.exists() && Array.isArray(snap.data().items)) {
+      const cloudItems = snap.data().items;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudItems));
+      if (typeof window.render === "function") window.render();
+    } else {
+      // First time: upload local items if any
+      const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      if (local.length) await setDoc(userDoc(u.uid), { items: local }, { merge: true });
+    }
+  }
+
+  // Wrap your existing save() so every save also syncs to cloud
+  (function wrapSave(){
+    const original = window.save;
+    if (typeof original !== "function") return;
+    window.save = function(...args){
+      const r = original.apply(this, args);
+      clearTimeout(window.__saveCloudT);
+      window.__saveCloudT = setTimeout(saveCloud, 150); // tiny debounce
+      return r;
+    };
+  })();
+
+  // When auth state changes, update button label and load data
+  onAuthStateChanged(auth, async (u) => {
+    const btn = $("#authBtn");
+    if (btn) btn.textContent = u ? `Sign out (${u.displayName?.split(" ")[0] || "you"})` : "Sign in";
+    if (u) await loadFromCloud(u);
+  });
+</script>
+</body>
+</html>
