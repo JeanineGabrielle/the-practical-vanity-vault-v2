@@ -832,11 +832,21 @@
   const userDoc = (uid) => doc(db, "users", uid);
 
   async function uploadLocalToCloud() {
-    const u = auth.currentUser; if (!u) return;
-    const {key, items} = getLocalItems();
-    await setDoc(userDoc(u.uid), { items, lastWrite: serverTimestamp() }, { merge: true });
-    console.log("🔼 Uploaded", items.length, "items to cloud from", key);
-  }
+  const u = auth.currentUser; if (!u) return;
+  const { key, items } = getLocalItems();
+
+  // Strip out large image data before uploading to avoid Firestore 1MB limit
+  const slimItems = items.map(({ photoDataUrl, imageBlob, imageData, ...rest }) => rest);
+
+  await setDoc(userDoc(u.uid), {
+    items: slimItems,
+    lastWrite: serverTimestamp()
+  }, { merge: true });
+
+  console.log("🔼 Uploaded", slimItems.length, "slim items to cloud from", key);
+  try { showToast && showToast("Uploaded to cloud ☁️"); } catch {}
+}
+
 
  async function downloadCloudToLocal() {
   const u = auth.currentUser; if (!u) return;
@@ -900,7 +910,6 @@ if (actionsRow && !document.querySelector("#syncNow")) {
   sync.addEventListener("click", uploadLocalToCloud);
   }
   })();
-
   // Save wrapper: attempt cloud save shortly after any save() call
   (function wrapSave(){
     const original = window.save;
