@@ -838,24 +838,31 @@
     console.log("🔼 Uploaded", items.length, "items to cloud from", key);
   }
 
-  async function downloadCloudToLocal() {
+ async function downloadCloudToLocal() {
   const u = auth.currentUser; if (!u) return;
   const snap = await getDoc(userDoc(u.uid));
   if (snap.exists() && Array.isArray(snap.data().items)) {
-    const { key } = getLocalItems();   // your helper that returns {key, items}
+    const { key } = getLocalItems();
     setLocalItems(key, snap.data().items);
     console.log("🔽 Downloaded", snap.data().items.length, "items to", key);
 
-    // Force the UI to refresh:
+    // Force the UI to refresh
     if (typeof window.render === "function") {
-      window.render();                 // your global render() that rebuilds the list
+      window.render();
     } else {
-      // Fallback: one-time hard reload so the page picks up new localStorage
+      // Fallback for mobile browsers that don't auto-refresh
       if (!sessionStorage.getItem("vv_refreshed_once")) {
         sessionStorage.setItem("vv_refreshed_once", "1");
         location.reload();
       }
     }
+
+    try { showToast && showToast("Downloaded from cloud ☁️"); } catch {}
+  } else {
+    console.log("No cloud items found yet for this user.");
+  }
+}
+
 
     // Optional toast if you included showToast earlier:
     try { showToast && showToast("Downloaded from cloud ☁️"); } catch {}
