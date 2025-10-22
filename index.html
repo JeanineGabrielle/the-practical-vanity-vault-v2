@@ -904,5 +904,138 @@
     }
   });
 </script>
+<!-- Firebase Cloud Sync (Auth + Firestore) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+  // --- Your Firebase config ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyC76JfjPlm_GZncCo4L-ZG-z_nhsXjr0kY",
+    authDomain: "thepracticalvanityvault.firebaseapp.com",
+    projectId: "thepracticalvanityvault",
+    storageBucket: "thepracticalvanityvault.firebasestorage.app",
+    messagingSenderId: "69211565265",
+    appId: "1:69211565265:web:584f479257c7a72769e9f0"
+  };
+
+  // Init
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // ===== Helpers =====
+  const STORAGE_KEYS = [
+    "practical_vanity_vault_inventory_v7",
+    "practical_vanity_vault_inventory_v8",
+    "practical_vanity_vault_inventory"
+  ];
+  function getLocal() {
+    for (const k of STORAGE_KEYS) {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      try { const arr = JSON.parse(raw); if (Array.isArray(arr)) return { key: k, items: arr }; } catch {}
+    }
+    return { key: STORAGE_KEYS[0], items: [] };
+  }
+  function setLocal(key, items) { localStorage.setItem(key, JSON.stringify(items ?? [])); }
+  const userDoc = (uid) => doc(db, "users", uid);
+
+  async function uploadLocalToCloud() {
+    const u = auth.currentUser; if (!u) return;
+    const { key, items } = getLocal();
+    await setDoc(userDoc(u.uid), { items, lastWrite: serverTimestamp() }, { merge: true });
+    console.log("🔼 Uploaded", items.length, "items (key:", key, ")");
+    showToast("Uploaded to cloud ☁️");
+  }
+
+  async function downloadCloudToLocal() {
+    const u = auth.currentUser; if (!u) return;
+    const snap = await getDoc(userDoc(u.uid));
+    if (snap.exists() && Array.isArray(snap.data().items)) {
+      const { key } = getLocal();
+      setLocal(key, snap.data().items);
+      console.log("🔽 Downloaded", snap.data().items.length, "items to", key);
+      if (typeof window.render === "function") window.render();
+      showToast("Downloaded from cloud ☁️");
+    }
+  }
+
+  // Small on-screen toast
+  function showToast(msg) {
+    let t = document.getElementById("vv-toast");
+    if (!t) {
+      t = document.createElement("div");
+      t.id = "vv-toast";
+      t.style.cssText =
+        "position:fixed;left:50%;transform:translateX(-50%);bottom:5.5rem;padding:.5rem .75rem;border-radius:9999px;background:#111827;color:white;font-size:.9rem;z-index:9999;opacity:.92";
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.display = "block";
+    clearTimeout(window.__vvToastHide);
+    window.__vvToastHide = setTimeout(()=>t.style.display="none", 1400);
+  }
+
+  // ===== UI: Sign in + floating Sync button (always visible) =====
+  (function injectUI(){
+    // Sign in/out button beside Dark mode (fallback if none: add to header)
+    const headerButtons = document.querySelector("header .flex.items-center.justify-center.gap-2") || document.querySelector("header");
+    if (headerButtons && !document.getElementById("authBtn")) {
+      const btn = document.createElement("button");
+      btn.id = "authBtn";
+      btn.className = "btn btn-soft";
+      btn.textContent = "Sign in";
+      btn.style.marginLeft = "0.5rem";
+      headerButtons.appendChild(btn);
+      btn.addEventListener("click", async () => {
+        if (auth.currentUser) { await signOut(auth); return; }
+        try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+        catch (e) { alert("Sign-in failed: " + e.message); }
+      });
+    }
+    // Floating "Sync now" button (bottom-right)
+    if (!document.getElementById("syncNowFloating")) {
+      const sync = document.createElement("button");
+      sync.id = "syncNowFloating";
+      sync.textContent = "☁️ Sync now";
+      sync.className = "btn";
+      sync.style.cssText =
+        "position:fixed;right:1rem;bottom:6.5rem;z-index:9998;padding:.65rem .9rem;border-radius:9999px;background:#f472b6;color:white;box-shadow:0 6px 16px rgba(0,0,0,.15)";
+      sync.addEventListener("click", uploadLocalToCloud);
+      document.body.appendChild(sync);
+    }
+  })();
+
+  // Wrap your existing save() so every save also uploads to cloud
+  (function wrapSave(){
+    const original = window.save;
+    window.save = function(...args){
+      const r = typeof original === "function" ? original.apply(this, args) : undefined;
+      clearTimeout(window.__vvCloudDebounce);
+      window.__vvCloudDebounce = setTimeout(uploadLocalToCloud, 250);
+      return r;
+    };
+  })();
+
+  // Auth → update label + first sync
+  onAuthStateChanged(auth, async (u) => {
+    const btn = document.getElementById("authBtn");
+    if (btn) btn.textContent = u ? `Sign out (${u.displayName?.split(" ")[0] || "you"})` : "Sign in";
+    if (!u) return;
+    // If cloud has data use it; otherwise upload local once
+    const snap = await getDoc(userDoc(u.uid));
+    if (snap.exists() && Array.isArray(snap.data().items) && snap.data().items.length) {
+      await downloadCloudToLocal();
+    } else {
+      await uploadLocalToCloud();
+    }
+  });
+</script>
 </body>
 </html>
