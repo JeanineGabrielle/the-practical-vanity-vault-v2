@@ -839,14 +839,31 @@
   }
 
   async function downloadCloudToLocal() {
-    const u = auth.currentUser; if (!u) return;
-    const snap = await getDoc(userDoc(u.uid));
-    if (snap.exists() && Array.isArray(snap.data().items)) {
-      const {key} = getLocalItems();
-      setLocalItems(key, snap.data().items);
-      console.log("🔽 Downloaded", snap.data().items.length, "items from cloud to", key);
-      if (typeof window.render === "function") window.render();
+  const u = auth.currentUser; if (!u) return;
+  const snap = await getDoc(userDoc(u.uid));
+  if (snap.exists() && Array.isArray(snap.data().items)) {
+    const { key } = getLocalItems();   // your helper that returns {key, items}
+    setLocalItems(key, snap.data().items);
+    console.log("🔽 Downloaded", snap.data().items.length, "items to", key);
+
+    // Force the UI to refresh:
+    if (typeof window.render === "function") {
+      window.render();                 // your global render() that rebuilds the list
+    } else {
+      // Fallback: one-time hard reload so the page picks up new localStorage
+      if (!sessionStorage.getItem("vv_refreshed_once")) {
+        sessionStorage.setItem("vv_refreshed_once", "1");
+        location.reload();
+      }
     }
+
+    // Optional toast if you included showToast earlier:
+    try { showToast && showToast("Downloaded from cloud ☁️"); } catch {}
+  } else {
+    console.log("No cloud items found yet for this user.");
+  }
+}
+
   }
 
   // --- UI: auth + manual sync button ---
@@ -891,16 +908,18 @@
   })();
 
   // Auth state changes
-  onAuthStateChanged(auth, async (u) => {
-    const btn = $("#authBtn");
-    if (btn) btn.textContent = u ? `Sign out (${u.displayName?.split(" ")[0] || "you"})` : "Sign in";
-    if (!u) return;
-    // If cloud has data, prefer cloud; otherwise upload local once
-    const snap = await getDoc(userDoc(u.uid));
-    if (snap.exists() && Array.isArray(snap.data().items) && snap.data().items.length) {
-      await downloadCloudToLocal();
-    } else {
-      await uploadLocalToCloud();
+ onAuthStateChanged(auth, async (u) => {
+  const btn = document.getElementById("authBtn");
+  if (btn) btn.textContent = u ? `Sign out (${u?.displayName?.split(" ")[0] || "you"})` : "Sign in";
+  console.log("Auth state:", u ? `signed in as ${u.email} (uid ${u.uid})` : "signed out");
+  if (!u) return;
+
+  // Always try to pull from cloud first
+  const snap = await getDoc(userDoc(u.uid));
+  if (snap.exists() && Array.isArray(snap.data().items) && snap.data().items.length) {
+    await downloadCloudToLocal();   // refresh UI on this device
+  } else {
+    await uploadLocalToCloud();     // first-time: push local to cloud
     }
   });
 </script>
