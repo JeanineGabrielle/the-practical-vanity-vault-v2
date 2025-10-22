@@ -965,6 +965,7 @@
 
   // Init
   const app  = initializeApp(firebaseConfig);
+  console.log("Firebase initialized:", firebaseConfig.projectId);
   const auth = getAuth(app);
   const db   = getFirestore(app);
 
