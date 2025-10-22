@@ -862,30 +862,11 @@
         location.reload();
       }
     }
-
     try { showToast && showToast("Downloaded from cloud ☁️"); } catch {}
   } else {
     console.log("No cloud items found yet for this user.");
   }
-}
-
-
-    try { showToast && showToast("Downloaded from cloud ☁️"); } catch {}
-  } else {
-    console.log("No cloud items found yet for this user.");
-  }
-}
-
-
-    // Optional toast if you included showToast earlier:
-    try { showToast && showToast("Downloaded from cloud ☁️"); } catch {}
-  } else {
-    console.log("No cloud items found yet for this user.");
-  }
-}
-
-  }
-
+} // <-- end of downloadCloudToLocal()
   // --- UI: auth + manual sync button ---
   (function injectButtons(){
     // put Sign in next to Dark mode
