@@ -840,28 +840,31 @@
 
  async function downloadCloudToLocal() {
   const u = auth.currentUser; if (!u) return;
+
   const snap = await getDoc(userDoc(u.uid));
   if (snap.exists() && Array.isArray(snap.data().items)) {
     const cloudItems = snap.data().items;
 
-    // ✅ Update in-memory data
+    // ✅ 1) Update the in-memory array your UI uses
     window.items = Array.isArray(cloudItems) ? [...cloudItems] : [];
 
-    // ✅ Save to localStorage for persistence
+    // ✅ 2) Save to localStorage so it persists & works offline
     const { key } = getLocalItems();
     setLocalItems(key, cloudItems);
 
-    console.log("🔽 Downloaded", cloudItems.length, "items to memory +", key);
+    console.log("🔽 Downloaded", cloudItems.length, "items → memory +", key);
 
-    // ✅ Force UI refresh (mobile-safe)
+    // ✅ 3) Force a UI refresh
     if (typeof window.render === "function") {
       window.render();
     } else {
+      // One-time reload in case render() isn't available on mobile
       if (!sessionStorage.getItem("vv_refreshed_once")) {
         sessionStorage.setItem("vv_refreshed_once", "1");
         location.reload();
       }
     }
+
     try { showToast && showToast("Downloaded from cloud ☁️"); } catch {}
   } else {
     console.log("No cloud items found yet for this user.");
