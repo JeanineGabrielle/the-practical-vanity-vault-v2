@@ -887,13 +887,18 @@
       });
     }
     // add "Sync now" near Save My Shelf (non-destructive)
-    const actionsRow = document.querySelector("button:contains('Save My Shelf')")?.parentElement
-      || document.querySelector(".fixed")?.parentElement;
-    if (actionsRow && !$("#syncNow")) {
-      const sync = document.createElement("button");
-      sync.id = "syncNow";
-      sync.className = "btn btn-soft ml-2";
-      sync.textContent = "Sync now";
+const allBtns = Array.from(document.querySelectorAll("button"));
+const saveBtn = allBtns.find(b => (b.textContent || "").toLowerCase().includes("save my shelf"));
+const actionsRow = saveBtn?.parentElement || document.querySelector(".fixed")?.parentElement || document.body;
+if (actionsRow && !document.querySelector("#syncNow")) {
+  const sync = document.createElement("button");
+  sync.id = "syncNow";
+  sync.className = "btn btn-soft ml-2";
+  sync.textContent = "Sync now";
+  sync.title = "Upload local data to cloud";
+  actionsRow.appendChild(sync);
+  sync.addEventListener("click", uploadLocalToCloud);
+}
       sync.title = "Upload local data to cloud";
       actionsRow.appendChild(sync);
       sync.addEventListener("click", uploadLocalToCloud);
