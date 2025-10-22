@@ -842,20 +842,33 @@
   const u = auth.currentUser; if (!u) return;
   const snap = await getDoc(userDoc(u.uid));
   if (snap.exists() && Array.isArray(snap.data().items)) {
-    const { key } = getLocalItems();
-    setLocalItems(key, snap.data().items);
-    console.log("🔽 Downloaded", snap.data().items.length, "items to", key);
+    const cloudItems = snap.data().items;
 
-    // Force the UI to refresh
+    // ✅ Update in-memory data
+    window.items = Array.isArray(cloudItems) ? [...cloudItems] : [];
+
+    // ✅ Save to localStorage for persistence
+    const { key } = getLocalItems();
+    setLocalItems(key, cloudItems);
+
+    console.log("🔽 Downloaded", cloudItems.length, "items to memory +", key);
+
+    // ✅ Force UI refresh (mobile-safe)
     if (typeof window.render === "function") {
       window.render();
     } else {
-      // Fallback for mobile browsers that don't auto-refresh
       if (!sessionStorage.getItem("vv_refreshed_once")) {
         sessionStorage.setItem("vv_refreshed_once", "1");
         location.reload();
       }
     }
+
+    try { showToast && showToast("Downloaded from cloud ☁️"); } catch {}
+  } else {
+    console.log("No cloud items found yet for this user.");
+  }
+}
+
 
     try { showToast && showToast("Downloaded from cloud ☁️"); } catch {}
   } else {
