@@ -790,5 +790,119 @@
     if (u) await loadFromCloud(u);
   });
 </script>
+<!-- Firebase Cloud Sync (Auth + Firestore) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC76JfjPlm_GZncCo4L-ZG-z_nhsXjr0kY",
+    authDomain: "thepracticalvanityvault.firebaseapp.com",
+    projectId: "thepracticalvanityvault",
+    storageBucket: "thepracticalvanityvault.firebasestorage.app",
+    messagingSenderId: "69211565265",
+    appId: "1:69211565265:web:584f479257c7a72769e9f0"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // --- Helpers ---
+  const $ = (s, r=document)=>r.querySelector(s);
+  const STORAGE_KEYS = [
+    "practical_vanity_vault_inventory_v7",
+    "practical_vanity_vault_inventory_v8",
+    "practical_vanity_vault_inventory"
+  ];
+  const getLocalItems = () => {
+    for (const k of STORAGE_KEYS) {
+      const v = localStorage.getItem(k);
+      if (v) { try { const arr = JSON.parse(v); if (Array.isArray(arr)) return {key:k, items:arr}; } catch(_){} }
+    }
+    return {key: STORAGE_KEYS[0], items: []};
+  };
+  const setLocalItems = (key, items) => localStorage.setItem(key, JSON.stringify(items ?? []));
+
+  const userDoc = (uid) => doc(db, "users", uid);
+
+  async function uploadLocalToCloud() {
+    const u = auth.currentUser; if (!u) return;
+    const {key, items} = getLocalItems();
+    await setDoc(userDoc(u.uid), { items, lastWrite: serverTimestamp() }, { merge: true });
+    console.log("🔼 Uploaded", items.length, "items to cloud from", key);
+  }
+
+  async function downloadCloudToLocal() {
+    const u = auth.currentUser; if (!u) return;
+    const snap = await getDoc(userDoc(u.uid));
+    if (snap.exists() && Array.isArray(snap.data().items)) {
+      const {key} = getLocalItems();
+      setLocalItems(key, snap.data().items);
+      console.log("🔽 Downloaded", snap.data().items.length, "items from cloud to", key);
+      if (typeof window.render === "function") window.render();
+    }
+  }
+
+  // --- UI: auth + manual sync button ---
+  (function injectButtons(){
+    // put Sign in next to Dark mode
+    const bar = document.querySelector("header .flex.items-center.justify-center.gap-2");
+    if (bar && !$("#authBtn")) {
+      const btn = document.createElement("button");
+      btn.id = "authBtn";
+      btn.className = "btn btn-soft";
+      btn.textContent = "Sign in";
+      bar.appendChild(btn);
+      btn.addEventListener("click", async () => {
+        if (auth.currentUser) { await signOut(auth); return; }
+        try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+        catch(e){ alert("Sign-in failed: " + e.message); }
+      });
+    }
+    // add "Sync now" near Save My Shelf (non-destructive)
+    const actionsRow = document.querySelector("button:contains('Save My Shelf')")?.parentElement
+      || document.querySelector(".fixed")?.parentElement;
+    if (actionsRow && !$("#syncNow")) {
+      const sync = document.createElement("button");
+      sync.id = "syncNow";
+      sync.className = "btn btn-soft ml-2";
+      sync.textContent = "Sync now";
+      sync.title = "Upload local data to cloud";
+      actionsRow.appendChild(sync);
+      sync.addEventListener("click", uploadLocalToCloud);
+    }
+  })();
+
+  // Save wrapper: attempt cloud save shortly after any save() call
+  (function wrapSave(){
+    const original = window.save;
+    window.save = function(...args){
+      const r = typeof original === "function" ? original.apply(this, args) : undefined;
+      clearTimeout(window.__saveCloudT);
+      window.__saveCloudT = setTimeout(uploadLocalToCloud, 200);
+      return r;
+    };
+  })();
+
+  // Auth state changes
+  onAuthStateChanged(auth, async (u) => {
+    const btn = $("#authBtn");
+    if (btn) btn.textContent = u ? `Sign out (${u.displayName?.split(" ")[0] || "you"})` : "Sign in";
+    if (!u) return;
+    // If cloud has data, prefer cloud; otherwise upload local once
+    const snap = await getDoc(userDoc(u.uid));
+    if (snap.exists() && Array.isArray(snap.data().items) && snap.data().items.length) {
+      await downloadCloudToLocal();
+    } else {
+      await uploadLocalToCloud();
+    }
+  });
+</script>
 </body>
 </html>
