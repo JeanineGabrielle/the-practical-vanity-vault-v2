@@ -31,7 +31,7 @@ Your inventory is **private to you**.
 ---
 
 ### 🚀 Getting Started
-1. Visit the live app → [**Vanity Vault on GitHub Pages**](https://jeaninegabrielle.github.io/the-practical-vanity-vault/)  
+1. Visit the live app → [**Vanity Vault on GitHub Pages**](https://jeaninegabrielle.github.io/the-practical-vanity-vault-v2/)
 2. Add your first product and batch — it autosaves!  
 3. Optionally, click **Sign in** to sync your inventory to the cloud.  
 4. Use **Save My Shelf** or **Export JSON** as backup options.  
