@@ -756,29 +756,49 @@
   }
 
   // ---- Download: only overwrite local if cloud has content ----
-  async function downloadCloudToLocal() {
-    const u = auth.currentUser; if (!u) return;
-    const snap = await getDoc(userDoc(u.uid));
+ async function downloadCloudToLocal() {
+  const u = auth.currentUser; if (!u) return;
+  const snap = await getDoc(userDoc(u.uid));
 
-    if (snap.exists() && Array.isArray(snap.data().items) && snap.data().items.length > 0) {
-      const cloudItems = snap.data().items;
-      const { key } = getLocal();
-      setLocal(key, cloudItems);
-      // update in-memory data if your page uses window.items
-      window.items = Array.isArray(cloudItems) ? [...cloudItems] : [];
-      console.log("🔽 Downloaded", cloudItems.length, "items →", key);
-      if (typeof window.render === "function") window.render();
-      try { showToast("Downloaded from cloud ☁️"); } catch {}
+  // local helpers
+  const { key: localKey, items: localItems } = getLocal();
+  const makeKey = (p) => `${(p.name||'').trim()}|${(p.brand||'').trim()}`.toLowerCase();
+
+  if (snap.exists() && Array.isArray(snap.data().items)) {
+    const cloudItems = snap.data().items;
+
+    // Map local photos by key
+    const localPhotoMap = new Map(
+      (localItems || []).map(p => [makeKey(p), (p.photo || p.photoDataUrl || "")])
+    );
+
+    // Merge: prefer cloud data, but keep any local photo if cloud has none
+    const merged = cloudItems.map(p => {
+      const k = makeKey(p);
+      const photo = (typeof p.photo === "string" && p.photo.startsWith("http"))
+        ? p.photo                     // already a URL (from Storage)
+        : (p.photo || localPhotoMap.get(k) || ""); // keep local photo if present
+      return { ...p, photo };
+    });
+
+    // Save + refresh UI
+    setLocal(localKey, merged);
+    window.items = Array.isArray(merged) ? [...merged] : [];
+    console.log("🔽 Downloaded", merged.length, "items →", localKey, "(kept local photos)");
+    if (typeof window.render === "function") window.render();
+
+  } else {
+    // Cloud empty: push your current local once, but DO NOT wipe local
+    const { items } = getLocal();
+    if (items.length) {
+      await uploadLocalToCloud();
+      console.log("☁️ Cloud was empty — uploaded local metadata (photos remain local-only).");
     } else {
-      // Cloud empty: keep local and push it up once
-      const { items } = getLocal();
-      if (items.length) {
-        await uploadLocalToCloud();
-      } else {
-        console.log("Cloud empty and no local items — nothing to sync yet.");
-      }
+      console.log("Cloud empty and no local items — nothing to sync yet.");
     }
   }
+}
+
 
   // ---- Tiny toast helper (optional) ----
   function showToast(msg) {
