@@ -692,18 +692,16 @@
     ensureAtLeastOneBatchRow();
     render();
   </script>
-<!-- Firebase Cloud Sync (Auth + Firestore) — SINGLE CONSOLIDATED BLOCK -->
+<!-- Firebase Cloud Sync (single, consolidated) -->
 <script type="module">
-  // Firebase SDK (12.4.0) from CDN
+  // SDKs
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-  import {
-    getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-  import {
-    getFirestore, doc, getDoc, setDoc, serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
-  // --- Your Firebase config ---
+  // --- Your Firebase project ---
   const firebaseConfig = {
     apiKey: "AIzaSyC76JfjPlm_GZncCo4L-ZG-z_nhsXjr0kY",
     authDomain: "thepracticalvanityvault.firebaseapp.com",
@@ -714,11 +712,11 @@
   };
 
   // Init
-  const app  = initializeApp(firebaseConfig);
+  const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db   = getFirestore(app);
 
-  // ---- Helpers: local storage keys (support older keys) ----
+  // ---- Local storage helpers (support older keys too) ----
   const STORAGE_KEYS = [
     "practical_vanity_vault_inventory_v7",
     "practical_vanity_vault_inventory_v8",
@@ -728,69 +726,87 @@
     for (const k of STORAGE_KEYS) {
       const raw = localStorage.getItem(k);
       if (!raw) continue;
-      try { const arr = JSON.parse(raw); if (Array.isArray(arr)) return { key: k, items: arr }; } catch {}
+      try {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) return { key: k, items: arr };
+      } catch {}
     }
     return { key: STORAGE_KEYS[0], items: [] };
   }
-  function setLocal(key, items) { localStorage.setItem(key, JSON.stringify(items ?? [])); }
+  function setLocal(key, items) {
+    localStorage.setItem(key, JSON.stringify(items ?? []));
+  }
   const userDoc = (uid) => doc(db, "users", uid);
 
-  // ---- Cloud sync (slim upload: strip image data) ----
+  // ---- Upload: strip images to stay under Firestore 1 MB limit ----
   async function uploadLocalToCloud() {
     const u = auth.currentUser; if (!u) return;
     const { key, items } = getLocal();
 
-    // Strip potentially huge fields (base64/DataURLs) before upload to avoid the 1MB limit
-    const slimItems = items.map(({ photo, photoDataUrl, imageBlob, imageData, ...rest }) => rest);
+    // Remove large fields before upload (THIS fixes the 1MB error)
+    const slimItems = items.map(({ photo, photoDataUrl, imageData, imageBlob, ...rest }) => rest);
 
-    await setDoc(userDoc(u.uid), {
-      items: slimItems,
-      lastWrite: serverTimestamp()
-    }, { merge: true });
-
-    console.log("🔼 Uploaded", slimItems.length, "slim items to cloud from", key);
-    try { window.showToast?.("Uploaded to cloud ☁️"); } catch {}
+    await setDoc(
+      userDoc(u.uid),
+      { items: slimItems, lastWrite: serverTimestamp() },
+      { merge: true }
+    );
+    console.log("🔼 Uploaded", slimItems.length, "slim items from", key);
+    try { showToast("Uploaded to cloud ☁️"); } catch {}
   }
 
+  // ---- Download: only overwrite local if cloud has content ----
   async function downloadCloudToLocal() {
     const u = auth.currentUser; if (!u) return;
     const snap = await getDoc(userDoc(u.uid));
-    if (snap.exists() && Array.isArray(snap.data().items)) {
+
+    if (snap.exists() && Array.isArray(snap.data().items) && snap.data().items.length > 0) {
       const cloudItems = snap.data().items;
       const { key } = getLocal();
-
-      // Update memory the UI uses (your app reads global window.items)
-      window.items = Array.isArray(cloudItems) ? [...cloudItems] : [];
-
-      // Persist locally for offline use
       setLocal(key, cloudItems);
-
-      console.log("🔽 Downloaded", cloudItems.length, "items → memory +", key);
+      // update in-memory data if your page uses window.items
+      window.items = Array.isArray(cloudItems) ? [...cloudItems] : [];
+      console.log("🔽 Downloaded", cloudItems.length, "items →", key);
       if (typeof window.render === "function") window.render();
-      else {
-        // One-time reload on mobile if render() isn't available immediately
-        if (!sessionStorage.getItem("vv_refreshed_once")) {
-          sessionStorage.setItem("vv_refreshed_once", "1");
-          location.reload();
-        }
-      }
-      try { window.showToast?.("Downloaded from cloud ☁️"); } catch {}
+      try { showToast("Downloaded from cloud ☁️"); } catch {}
     } else {
-      console.log("No cloud items yet; will upload local on first save/sync.");
+      // Cloud empty: keep local and push it up once
+      const { items } = getLocal();
+      if (items.length) {
+        await uploadLocalToCloud();
+      } else {
+        console.log("Cloud empty and no local items — nothing to sync yet.");
+      }
     }
   }
 
-  // ---- UI wiring: Sign in button + one "Sync now" button ----
-  (function injectUI(){
-    // Add Sign in/out next to Dark mode
-    const headerButtons = document.querySelector("header .flex.items-center.justify-center.gap-2") || document.querySelector("header");
-    if (headerButtons && !document.getElementById("authBtn")) {
+  // ---- Tiny toast helper (optional) ----
+  function showToast(msg) {
+    let t = document.getElementById("vv-toast");
+    if (!t) {
+      t = document.createElement("div");
+      t.id = "vv-toast";
+      t.style.cssText =
+        "position:fixed;left:50%;transform:translateX(-50%);bottom:5.5rem;padding:.5rem .75rem;border-radius:9999px;background:#111827;color:white;font-size:.9rem;z-index:9999;opacity:.92";
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.display = "block";
+    clearTimeout(window.__vvToastHide);
+    window.__vvToastHide = setTimeout(() => (t.style.display = "none"), 1400);
+  }
+
+  // ---- UI: add ONE auth button + ONE floating “Sync now” ----
+  (function injectUI() {
+    // Auth beside Dark mode
+    const bar = document.querySelector("header .flex.items-center.justify-center.gap-2") || document.querySelector("header");
+    if (bar && !document.getElementById("authBtn")) {
       const btn = document.createElement("button");
       btn.id = "authBtn";
       btn.className = "btn btn-soft";
       btn.textContent = "Sign in";
       btn.style.marginLeft = "0.5rem";
-      headerButtons.appendChild(btn);
+      bar.appendChild(btn);
       btn.addEventListener("click", async () => {
         if (auth.currentUser) { await signOut(auth); return; }
         try { await signInWithPopup(auth, new GoogleAuthProvider()); }
@@ -798,25 +814,23 @@
       });
     }
 
-    // Add exactly ONE "Sync now" button near the floating “Save My Shelf”
-    const saveBtn = document.getElementById("backupBtn"); // your existing floating button
-    const actionsRow = saveBtn?.parentElement || document.body;
-    if (actionsRow && !document.getElementById("syncNow")) {
+    // Single floating Sync button (remove any other “Sync now” creators)
+    if (!document.getElementById("syncNowFloating")) {
       const sync = document.createElement("button");
-      sync.id = "syncNow";
-      sync.className = "btn";
+      sync.id = "syncNowFloating";
       sync.textContent = "☁️ Sync now";
-      sync.style.cssText = "position:fixed; right:1rem; bottom:6.5rem; z-index:9998; padding:.65rem .9rem; border-radius:9999px; background:#f472b6; color:white; box-shadow:0 6px 16px rgba(0,0,0,.15)";
-      sync.title = "Upload local data to cloud";
+      sync.className = "btn";
+      sync.style.cssText =
+        "position:fixed;right:1rem;bottom:6.5rem;z-index:9998;padding:.65rem .9rem;border-radius:9999px;background:#f472b6;color:white;box-shadow:0 6px 16px rgba(0,0,0,.15)";
       sync.addEventListener("click", uploadLocalToCloud);
-      actionsRow.appendChild(sync);
+      document.body.appendChild(sync);
     }
   })();
 
-  // ---- Wrap your existing save() so every save also uploads to cloud (debounced) ----
-  (function wrapSave(){
+  // ---- Wrap your existing save() so changes auto-sync (debounced) ----
+  (function wrapSave() {
     const original = window.save;
-    window.save = function(...args){
+    window.save = function (...args) {
       const r = typeof original === "function" ? original.apply(this, args) : undefined;
       clearTimeout(window.__vvCloudDebounce);
       window.__vvCloudDebounce = setTimeout(uploadLocalToCloud, 250);
@@ -824,17 +838,17 @@
     };
   })();
 
-  // ---- Auth state → label + first sync strategy ----
+  // ---- Auth flow ----
   onAuthStateChanged(auth, async (u) => {
     const btn = document.getElementById("authBtn");
     if (btn) btn.textContent = u ? `Sign out (${u.displayName?.split(" ")[0] || "you"})` : "Sign in";
-    console.log("Auth state:", u ? `signed in as ${u.email} (uid ${u.uid})` : "signed out");
+    console.log("Auth state:", u ? `signed in as ${u.email} (${u.uid})` : "signed out");
 
     if (!u) return;
 
-    // Prefer pulling cloud items; if none exist, push local
+    // Prefer cloud if it has items; otherwise push local once.
     const snap = await getDoc(userDoc(u.uid));
-    if (snap.exists() && Array.isArray(snap.data().items) && snap.data().items.length) {
+    if (snap.exists() && Array.isArray(snap.data().items) && snap.data().items.length > 0) {
       await downloadCloudToLocal();
     } else {
       await uploadLocalToCloud();
